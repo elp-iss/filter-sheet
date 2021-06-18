@@ -1,6 +1,11 @@
 export type PlatformData = {
   name: string
-  header: string
+  header: Header
+}
+
+export type Header = {
+  start: number
+  end: number
 }
 
 type Platform = {
@@ -11,8 +16,8 @@ type Platform = {
 }
 
 export const platforms: Platform = {
-  PCVR: { name: 'PCVR', header: 'E1:X1' },
-  Quest: { name: 'Questのみ', header: 'AS1:BB1' },
-  Desktop: { name: 'デスクトップのみ', header: 'Y1:AR1' },
-  QuestDT: { name: 'Questとデスクトップ', header: 'BC1:BV1' },
+  PCVR: { name: 'PCVR', header: { start: 4, end: 23 } },
+  Quest: { name: 'Questのみ', header: { start: 44, end: 53 } },
+  Desktop: { name: 'デスクトップのみ', header: { start: 24, end: 43 } },
+  QuestDT: { name: 'Questとデスクトップ', header: { start: 54, end: 73 } },
 }

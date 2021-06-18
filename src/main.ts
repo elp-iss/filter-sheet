@@ -32,6 +32,7 @@ const test = () => {
       app.deleteSheet(sheet)
     }
   })
+  const rows = sheet1.getRange('A1:BX').getValues()
 
   console.log('1日目抽出中')
   const firstDay = mergePlatforms([
@@ -39,10 +40,7 @@ const test = () => {
     getQuestDTFirstDay,
     getDesktopFirstDay,
     getPCVRFirstDay,
-  ])(sheet1)
-  const firstSheet = app.insertSheet('1日目抽出結果')
-  console.log('1日目出力中')
-  firstDay.forEach((row) => firstSheet.appendRow(row))
+  ])(rows)
 
   console.log('2日目抽出中')
   const secondDay = mergePlatforms([
@@ -50,10 +48,7 @@ const test = () => {
     getQuestDTSecondDay,
     getDesktopSecondDay,
     getPCVRSecondDay,
-  ])(sheet1)
-  const secondSheet = app.insertSheet('2日目抽出結果')
-  console.log('2日目出力中')
-  secondDay.forEach((row) => secondSheet.appendRow(row))
+  ])(rows)
 
   console.log('3日目抽出中')
   const thirdDay = mergePlatforms([
@@ -61,10 +56,7 @@ const test = () => {
     getQuestDTThirdDay,
     getDesktopThirdDay,
     getPCVRThirdDay,
-  ])(sheet1)
-  const thirdSheet = app.insertSheet('3日目抽出結果')
-  console.log('3日目出力中')
-  thirdDay.forEach((row) => thirdSheet.appendRow(row))
+  ])(rows)
 
   console.log('4日目抽出中')
   const fourthDay = mergePlatforms([
@@ -72,22 +64,35 @@ const test = () => {
     getQuestDTFourthDay,
     getDesktopFourthDay,
     getPCVRFourthDay,
-  ])(sheet1)
-  const fourthSheet = app.insertSheet('4日目抽出結果')
-  console.log('4日目出力中')
-  fourthDay.forEach((row) => fourthSheet.appendRow(row))
+  ])(rows)
+
+  const sheetDatas = [firstDay, secondDay, thirdDay, fourthDay]
+  sheetDatas.map(justifyColsLength).forEach((data, i) => {
+    const date = `${i + 1}日目`
+    console.log(`${date}日目のシート出力中`)
+    const sheet = app.insertSheet(`${date}抽出結果`)
+    sheet.getRange(1, 1, data.length, data[0].length).setValues(data)
+    console.log(`${date}日目のシート出力終了`)
+  })
 }
 
-type extractFunc = (a: GoogleAppsScript.Spreadsheet.Sheet) => string[][]
-const mergePlatforms =
-  (arr: extractFunc[]) => (sheet: GoogleAppsScript.Spreadsheet.Sheet) => {
-    const body = arr
-      .map((f) => f(sheet))
-      .map((e) => e.slice(1))
-      .reduce((acc, current) => acc.concat(current))
-    const header = createSheetHeader(body)
-    return [header].concat(body)
-  }
+type extractFunc = (a: string[][]) => string[][]
+const mergePlatforms = (arr: extractFunc[]) => (sheet: string[][]) => {
+  const body = arr
+    .map((f) => f(sheet))
+    .map((e) => e.slice(1))
+    .reduce((acc, current) => acc.concat(current))
+  const header = createSheetHeader(body)
+  return [header].concat(body)
+}
+
+const justifyColsLength = (sheet: string[][]) => {
+  const headerLength = sheet[0].length
+  return sheet.map((rows) => {
+    rows.length = headerLength
+    return rows.map((e) => (e === undefined ? '' : e))
+  })
+}
 
 /* eslint @typescript-eslint/no-explicit-any: 0 */
 declare let global: any
