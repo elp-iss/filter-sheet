@@ -26,15 +26,20 @@ import { createSheetHeader } from './helpers/createSheetHeader'
 
 const app = SpreadsheetApp.getActiveSpreadsheet()
 const sheet1 = app.getSheets()[0]
-const test = () => {
-  app.getSheets().forEach((sheet, i) => {
-    if (i > 0) {
-      app.deleteSheet(sheet)
-    }
+const test = async() => {
+  const deleteSheets = new Promise<void>((resolve) => {
+    console.log('シート削除処理開始')
+    app.getSheets().forEach((sheet, i) => {
+      if (i > 0) {
+        app.deleteSheet(sheet)
+      }
+    })
+    resolve()
   })
+  deleteSheets.then(() => console.log('シート削除処理終了'))
   const rows = sheet1.getRange('A1:BX').getValues()
 
-  console.log('1日目抽出中')
+  console.log('データ抽出開始')
   const firstDay = mergePlatforms([
     getQuestFirstDay,
     getQuestDTFirstDay,
@@ -42,7 +47,6 @@ const test = () => {
     getPCVRFirstDay,
   ])(rows)
 
-  console.log('2日目抽出中')
   const secondDay = mergePlatforms([
     getQuestSecondDay,
     getQuestDTSecondDay,
@@ -50,7 +54,6 @@ const test = () => {
     getPCVRSecondDay,
   ])(rows)
 
-  console.log('3日目抽出中')
   const thirdDay = mergePlatforms([
     getQuestThirdDay,
     getQuestDTThirdDay,
@@ -58,7 +61,6 @@ const test = () => {
     getPCVRThirdDay,
   ])(rows)
 
-  console.log('4日目抽出中')
   const fourthDay = mergePlatforms([
     getQuestFourthDay,
     getQuestDTFourthDay,
@@ -66,24 +68,30 @@ const test = () => {
     getPCVRFourthDay,
   ])(rows)
 
-  const sheetDatas = [firstDay, secondDay, thirdDay, fourthDay]
-  sheetDatas.map(justifyColsLength).forEach((data, i) => {
-    const date = `${i + 1}日目`
-    console.log(`${date}日目のシート出力中`)
-    const sheet = app.insertSheet(`${date}抽出結果`)
-    sheet.getRange(1, 1, data.length, data[0].length).setValues(data)
-    console.log(`${date}日目のシート出力終了`)
-  })
+  const sheetDatas = await Promise.all([firstDay, secondDay, thirdDay, fourthDay])
+  console.log('全抽出終了')
+  await Promise.all(sheetDatas.map(justifyColsLength).map((data, i) => {
+    return new Promise<string>((resolve) => {
+      console.log(`${i + 1}日目のシート出力開始`)
+      const date = `${i + 1}日目`
+      const sheet = app.insertSheet(`${date}抽出結果`)
+      sheet.getRange(1, 1, data.length, data[0].length).setValues(data)
+      console.log(`${i + 1}日目のシート出力終了`)
+      resolve(`${i + 1}日目のシート出力終了`)
+    })
+  })).then(() => console.log('全件出力終了'))
 }
 
 type extractFunc = (a: string[][]) => string[][]
-const mergePlatforms = (arr: extractFunc[]) => (sheet: string[][]) => {
-  const body = arr
-    .map((f) => f(sheet))
-    .map((e) => e.slice(1))
-    .reduce((acc, current) => acc.concat(current))
-  const header = createSheetHeader(body)
-  return [header].concat(body)
+const mergePlatforms = (arr: extractFunc[]) => (sheet: string[][]): Promise<string[][]> => {
+  return new Promise((resolve) => {
+    const body = arr
+      .map((f) => f(sheet))
+      .map((e) => e.slice(1))
+      .reduce((acc, current) => acc.concat(current))
+    const header = createSheetHeader(body)
+    resolve([header].concat(body))
+  })
 }
 
 const justifyColsLength = (sheet: string[][]) => {
